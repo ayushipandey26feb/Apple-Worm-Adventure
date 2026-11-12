@@ -549,10 +549,13 @@ function App() {
     if (eating) setAppleEaten(true)
 
     const movesToFinish = moves + 1
+    setMoves(movesToFinish)
     const reachingPortal =
       next.x === current.portal.x &&
       next.y === current.portal.y &&
       (appleEaten || eating)
+
+      if (!reachingPortal) return
 
     if (reachingPortal) {
       const earnedStars = movesToFinish < 12 ? 3 : movesToFinish < 18 ? 2 : 1
@@ -712,7 +715,7 @@ function App() {
       Math.max(previous, Math.min(LEVELS.length, level + 2))
     )
 
-    setMoves(movesToFinish)
+    
   }, [screen, won, gameOver, worm, current, appleEaten, level, moves, starredLevels, completed])
 
 useEffect(() => {
