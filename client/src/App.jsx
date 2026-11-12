@@ -555,11 +555,16 @@ function App() {
       next.y === current.portal.y &&
       (appleEaten || eating)
 
-      if (!reachingPortal) return
+    const earnedStars = movesToFinish < 12 ? 3 : movesToFinish < 18 ? 2 : 1
+    const earnedScore = Math.max(100, 500 - movesToFinish * 10)
+    if (!reachingPortal) {
+      setMoves(movesToFinish)
+      return
+    }
+
 
     if (reachingPortal) {
-      const earnedStars = movesToFinish < 12 ? 3 : movesToFinish < 18 ? 2 : 1
-      const earnedScore = Math.max(100, 500 - movesToFinish * 10)
+      
 
       // Save completed game progress to MongoDB
       if (localStorage.getItem('token') && !isGuest) {
@@ -715,518 +720,518 @@ function App() {
       Math.max(previous, Math.min(LEVELS.length, level + 2))
     )
 
-    
+
   }, [screen, won, gameOver, worm, current, appleEaten, level, moves, starredLevels, completed])
 
-useEffect(() => {
-  const handleKey = e => {
-    const keys = {
-      ArrowUp: [0, -1],
-      ArrowDown: [0, 1],
-      ArrowLeft: [-1, 0],
-      ArrowRight: [1, 0],
-      w: [0, -1],
-      s: [0, 1],
-      a: [-1, 0],
-      d: [1, 0],
+  useEffect(() => {
+    const handleKey = e => {
+      const keys = {
+        ArrowUp: [0, -1],
+        ArrowDown: [0, 1],
+        ArrowLeft: [-1, 0],
+        ArrowRight: [1, 0],
+        w: [0, -1],
+        s: [0, 1],
+        a: [-1, 0],
+        d: [1, 0],
+      }
+
+      if (keys[e.key] && screen === 'game') {
+        e.preventDefault()
+        moveWorm(...keys[e.key])
+      }
     }
 
-    if (keys[e.key] && screen === 'game') {
-      e.preventDefault()
-      moveWorm(...keys[e.key])
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [moveWorm, screen])
+
+  const startGuestSession = () => {
+    const readGuest = (key, fallback) => {
+      try {
+        const value = localStorage.getItem(`guest_${key}`)
+        return value === null ? fallback : JSON.parse(value)
+      } catch {
+        return fallback
+      }
     }
+
+    setIsGuest(true)
+    setProfile(null)
+    setAuthUser({
+      name: 'Guest Player',
+      email: 'Progress saved on this device'
+    })
+
+    const guestCompleted = readGuest('appleWormCompleted', [])
+    const guestUnlocked = readGuest('appleWormUnlocked', 1)
+
+    setCompleted(guestCompleted)
+    setUnlocked(Math.max(1, Math.min(LEVELS.length, guestUnlocked)))
+    setStars(readGuest('appleWormStars', 0))
+    setBestMoves(readGuest('appleWormBestMoves', {}))
+    setStarredLevels(readGuest('appleWormStarredLevels', []))
+    setLevelStars(readGuest('appleWormLevelStars', {}))
+
+    setLevel(0)
+    resetLevel(0)
+    setScreen('home')
   }
 
-  window.addEventListener('keydown', handleKey)
-  return () => window.removeEventListener('keydown', handleKey)
-}, [moveWorm, screen])
-
-const startGuestSession = () => {
-  const readGuest = (key, fallback) => {
-    try {
-      const value = localStorage.getItem(`guest_${key}`)
-      return value === null ? fallback : JSON.parse(value)
-    } catch {
-      return fallback
-    }
+  const goHome = () => {
+    resetLevel(0)
+    setLevel(0)
+    setScreen('home')
   }
 
-  setIsGuest(true)
-  setProfile(null)
-  setAuthUser({
-    name: 'Guest Player',
-    email: 'Progress saved on this device'
-  })
+  const handleLogout = () => {
+    localStorage.removeItem('token')
+    setAuthUser(null)
+    setProfile(null)
+    setIsGuest(false)
+    setScreen('auth')
+    resetLevel(0)
+    setLevel(0)
+  }
 
-  const guestCompleted = readGuest('appleWormCompleted', [])
-  const guestUnlocked = readGuest('appleWormUnlocked', 1)
-
-  setCompleted(guestCompleted)
-  setUnlocked(Math.max(1, Math.min(LEVELS.length, guestUnlocked)))
-  setStars(readGuest('appleWormStars', 0))
-  setBestMoves(readGuest('appleWormBestMoves', {}))
-  setStarredLevels(readGuest('appleWormStarredLevels', []))
-  setLevelStars(readGuest('appleWormLevelStars', {}))
-
-  setLevel(0)
-  resetLevel(0)
-  setScreen('home')
-}
-
-const goHome = () => {
-  resetLevel(0)
-  setLevel(0)
-  setScreen('home')
-}
-
-const handleLogout = () => {
-  localStorage.removeItem('token')
-  setAuthUser(null)
-  setProfile(null)
-  setIsGuest(false)
-  setScreen('auth')
-  resetLevel(0)
-  setLevel(0)
-}
-
-const resetProgress = async () => {
-  const confirmed = window.confirm(
-    'Reset all saved levels, stars, scores and best moves? This cannot be undone.'
-  );
-
-  if (!confirmed) return;
-
-  try {
-    if (isGuest) {
-      const guestKeys = [
-        'guest_appleWormUnlocked',
-        'guest_appleWormCompleted',
-        'guest_appleWormStars',
-        'guest_appleWormBestMoves',
-        'guest_appleWormStarredLevels',
-        'guest_appleWormLevelStars'
-      ];
-
-      guestKeys.forEach(key => localStorage.removeItem(key));
-    } else if (localStorage.getItem('token')) {
-      await apiRequest('/users/progress', {
-        method: 'DELETE'
-      });
-    }
-
-    setUnlocked(1);
-    setCompleted([]);
-    setStars(0);
-    setBestMoves({});
-    setStarredLevels([]);
-    setLevelStars({});
-    setLevel(0);
-
-    setProfile(previous =>
-      previous ? {
-        ...previous,
-        totalScore: 0,
-        completedLevels: 0,
-        unlockedLevels: 1,
-        levelProgress: [],
-        gameHistory: []
-      } : null
+  const resetProgress = async () => {
+    const confirmed = window.confirm(
+      'Reset all saved levels, stars, scores and best moves? This cannot be undone.'
     );
 
-    resetLevel(0);
-    setScreen('home');
+    if (!confirmed) return;
 
-    alert('Your game progress has been reset successfully!');
-
-  } catch (error) {
-    console.error('Reset progress failed:', error.message);
-    alert('Unable to reset progress. Please try again.');
-  }
-};
-
-
-useEffect(() => {
-  if (screen !== 'home' || !localStorage.getItem('token')) {
-    return;
-  }
-
-  const fetchProfile = async () => {
     try {
-      const data = await apiRequest('/users/profile');
+      if (isGuest) {
+        const guestKeys = [
+          'guest_appleWormUnlocked',
+          'guest_appleWormCompleted',
+          'guest_appleWormStars',
+          'guest_appleWormBestMoves',
+          'guest_appleWormStarredLevels',
+          'guest_appleWormLevelStars'
+        ];
 
-      setProfile(data.user);
-      setAuthUser(data.user);
-
-      const savedLevels = data.user.levelProgress || [];
-
-      // Load only this registered user's progress
-      const completedLevels = savedLevels
-        .filter(item => item.completed)
-        .map(item => item.levelId);
-
-      setCompleted(completedLevels);
-
-      setLevelStars(
-        Object.fromEntries(
-          savedLevels.map(item => [
-            item.levelId,
-            item.stars || 0
-          ])
-        )
-      );
-
-      setBestMoves(
-        Object.fromEntries(
-          savedLevels
-            .filter(item => item.bestMoves > 0)
-            .map(item => [
-              item.levelId,
-              item.bestMoves
-            ])
-        )
-      );
-
-      setUnlocked(
-        Math.max(1, data.user.unlockedLevels || 1)
-      );
-
-      setStars(
-        savedLevels.reduce(
-          (sum, item) => sum + (item.stars || 0),
-          0
-        )
-      );
-
-      setCoins(data.user.coins || 0);
-      try {
-        const historyData = await apiRequest('/users/reward-history');
-      } catch (error) {
-        console.error('Reward history fetch failed:', error.message);
+        guestKeys.forEach(key => localStorage.removeItem(key));
+      } else if (localStorage.getItem('token')) {
+        await apiRequest('/users/progress', {
+          method: 'DELETE'
+        });
       }
-      setRewardHistory(data.user.rewardHistory || []);
-      setAchievements(data.user.achievements || []);
-      await fetchLeaderboard();
 
-      setDailyRewardClaimed(
-        data.user.lastDailyRewardDate
-          ? new Date(data.user.lastDailyRewardDate).toDateString() ===
-          new Date().toDateString()
-          : false
+      setUnlocked(1);
+      setCompleted([]);
+      setStars(0);
+      setBestMoves({});
+      setStarredLevels([]);
+      setLevelStars({});
+      setLevel(0);
+
+      setProfile(previous =>
+        previous ? {
+          ...previous,
+          totalScore: 0,
+          completedLevels: 0,
+          unlockedLevels: 1,
+          levelProgress: [],
+          gameHistory: []
+        } : null
       );
 
-    } catch (error) {
-      console.error('Profile fetch failed:', error.message);
+      resetLevel(0);
+      setScreen('home');
 
-      localStorage.removeItem('token');
-      setAuthUser(null);
-      setProfile(null);
-      setScreen('auth');
+      alert('Your game progress has been reset successfully!');
+
+    } catch (error) {
+      console.error('Reset progress failed:', error.message);
+      alert('Unable to reset progress. Please try again.');
     }
   };
 
 
-  const fetchLeaderboard = async () => {
-    try {
-      const data = await apiRequest('/users/leaderboard');
-      setLeaderboard(data.leaderboard || []);
-    } catch (error) {
-      console.error('Leaderboard fetch failed:', error.message);
+  useEffect(() => {
+    if (screen !== 'home' || !localStorage.getItem('token')) {
+      return;
     }
-  };
 
-  fetchProfile();
-}, [screen]);
+    const fetchProfile = async () => {
+      try {
+        const data = await apiRequest('/users/profile');
 
+        setProfile(data.user);
+        setAuthUser(data.user);
 
-return (
-  <main className="app-shell">
-    {screen === 'auth' ? (
-      <header className="site-header auth-site-header">
-        <button className="brand" onClick={startGuestSession} aria-label="Play as guest">
-          <span className="brand-mark">🐛</span>
-          <span>APPLE WORM <b>ADVENTURE</b></span>
-        </button>
-        <span className="auth-header-note">Your next little big adventure</span>
-        <button className="nav-play" onClick={startGuestSession}>Play as Guest <span>↗</span></button>
-      </header>
-    ) : (
-      <header className="site-header">
-        <button className="brand" onClick={goHome} aria-label="Go to home">
-          <span className="brand-mark">🐛</span>
-          <span>APPLE WORM <b>ADVENTURE</b></span>
-        </button>
-        <nav className="main-nav" aria-label="Main navigation">
-          <button className={screen === 'home' ? 'active' : ''} onClick={goHome}>Home</button>
-          <button onClick={() => { setScreen('home'); window.setTimeout(() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }), 80) }}>How to play</button>
-          <button className={screen === 'levels' ? 'active' : ''} onClick={() => setScreen('levels')}>Levels</button>
-          <button onClick={() => { setScreen('home'); window.setTimeout(() => document.getElementById('player-stats')?.scrollIntoView({ behavior: 'smooth' }), 80) }}>Saved progress</button>
-          <button onClick={() => { setScreen('home'); window.setTimeout(() => document.getElementById('player-stats')?.scrollIntoView({ behavior: 'smooth' }), 80) }}>Profile</button>
-          {!isGuest && (
-            <button className="nav-logout nav-logout-inline" onClick={handleLogout} title="Logout from your account">
-              <span aria-hidden="true">↪</span> Logout
-            </button>
-          )}
-        </nav>
-        <div className="header-actions">
-          {isGuest ? (
-            <button className="nav-play" onClick={() => setScreen('auth')}>Login / Register <span>↗</span></button>
-          ) : (
-            <button className="nav-play" onClick={() => setScreen('levels')}>Play now <span>↗</span></button>
-          )}
-        </div>
-      </header>
-    )}
+        const savedLevels = data.user.levelProgress || [];
 
-    {screen === 'auth' && (
-      <div className="auth-screen">
-        <Auth
-          onLoginSuccess={(user) => {
-            setIsGuest(false)
-            setAuthUser(user)
-            setScreen('home')
-          }}
-        />
-        <div className="guest-entry">
-          <span>Just want to try the game?</span>
-          <button type="button" className="guest-play-button" onClick={startGuestSession}>Play as Guest <span>→</span></button>
-          <small>Guest progress stays on this device. Create an account to save future progress to your account and access rewards.</small>
-        </div>
-        <footer className="site-footer">THINK • WIGGLE • WIN</footer>
-      </div>
-    )}
+        // Load only this registered user's progress
+        const completedLevels = savedLevels
+          .filter(item => item.completed)
+          .map(item => item.levelId);
 
+        setCompleted(completedLevels);
 
+        setLevelStars(
+          Object.fromEntries(
+            savedLevels.map(item => [
+              item.levelId,
+              item.stars || 0
+            ])
+          )
+        );
 
-    {screen === 'home' && (
-      <>
-        <section className="hero-section" id="home">
-          <div className="hero-copy">
-            <div className="hero-kicker"><span>✦</span> YOUR NEXT LITTLE BIG ADVENTURE</div>
-            <h1>Ready, set,<br /><em>SLITHER!</em></h1>
-            <p className="hero-description">Meet your new wiggly best friend. Collect shiny apples, solve clever puzzles and find your way to the portal!</p>
-            <div className="hero-actions">
-              <button className="primary-cta" onClick={() => setScreen('levels')}>Play for free <span>→</span></button>
-              <a className="text-link" href="#features">How to play <span>↓</span></a>
-            </div>
-            <div className="hero-proof"><span className="mini-avatar">🐸</span><span className="mini-avatar">🐻</span><span className="mini-avatar">🐼</span><p><b>Big fun. Tiny worm.</b><small>One clever move at a time.</small></p></div>
-          </div>
+        setBestMoves(
+          Object.fromEntries(
+            savedLevels
+              .filter(item => item.bestMoves > 0)
+              .map(item => [
+                item.levelId,
+                item.bestMoves
+              ])
+          )
+        );
 
-          <div className="hero-visual" aria-label="Apple Worm Adventure game illustration">
-            <div className="sun-orb">☀️</div>
-            <span className="cloud cloud-one">☁️</span><span className="cloud cloud-two">☁️</span>
-            <span className="floating-star star-one">★</span><span className="floating-star star-two">✦</span>
-            <div className="scene-hill hill-back"></div><div className="scene-hill hill-front"></div>
-            <div className="scene-worm"><span className="worm-face">🐛</span><span className="worm-body">🟢</span><span className="worm-body">🟢</span></div>
-            <div className="scene-apple">🍎<span>✦</span></div>
-            <div className="scene-portal"><span>✦</span><small>GOAL</small></div>
-            <div className="scene-level-card"><span className="level-icon">🧩</span><span><b>LEVEL 01</b><small>The first bite</small></span><strong>★</strong></div>
-            <div className="scene-caption">🍃 &nbsp; THINK · WIGGLE · WIN &nbsp; 🍃</div>
-          </div>
-        </section>
+        setUnlocked(
+          Math.max(1, data.user.unlockedLevels || 1)
+        );
 
-        <section className="player-panel" id="player-stats">
-          <div className="player-heading"><div><span className="section-kicker">YOUR ADVENTURE</span><h2>
-            {isGuest
-              ? 'Welcome, Guest!'
-              : `Welcome back, ${profile?.name || authUser?.name || 'Player'}!`} 👋
-          </h2></div><span className="online-pill"><i></i> {isGuest ? 'GUEST MODE' : 'PLAYER PROFILE'}</span></div>
-          <div className="player-metrics">
-            <div className="metric-card"><span>✉️</span><small>EMAIL</small><b>{isGuest ? 'Saved on this device' : (profile?.email || authUser?.email || 'Player account')}</b></div>
-            <div className="metric-card"><span>🪙</span><small>COINS</small><b>{isGuest ? 'Account required' : coins}</b></div>
-            <div className="metric-card"><span>🏆</span><small>BEST SCORE</small><b>{isGuest ? score : (profile?.totalScore ?? 0)}</b></div>
-            <div className="metric-card"><span>🎯</span><small>LEVELS COMPLETED</small><b>{completed.length}</b></div>
-          </div>
+        setStars(
+          savedLevels.reduce(
+            (sum, item) => sum + (item.stars || 0),
+            0
+          )
+        );
+
+        setCoins(data.user.coins || 0);
+        try {
+          const historyData = await apiRequest('/users/reward-history');
+        } catch (error) {
+          console.error('Reward history fetch failed:', error.message);
+        }
+        setRewardHistory(data.user.rewardHistory || []);
+        setAchievements(data.user.achievements || []);
+        await fetchLeaderboard();
+
+        setDailyRewardClaimed(
+          data.user.lastDailyRewardDate
+            ? new Date(data.user.lastDailyRewardDate).toDateString() ===
+            new Date().toDateString()
+            : false
+        );
+
+      } catch (error) {
+        console.error('Profile fetch failed:', error.message);
+
+        localStorage.removeItem('token');
+        setAuthUser(null);
+        setProfile(null);
+        setScreen('auth');
+      }
+    };
 
 
-          <section className="achievement-section">
-            <div className="achievement-heading">
-              <span className="section-kicker">YOUR MILESTONES</span>
-              <h2>🏆 Achievements</h2>
-              <p>Celebrate your progress and every little victory!</p>
-            </div>
+    const fetchLeaderboard = async () => {
+      try {
+        const data = await apiRequest('/users/leaderboard');
+        setLeaderboard(data.leaderboard || []);
+      } catch (error) {
+        console.error('Leaderboard fetch failed:', error.message);
+      }
+    };
 
-            {isGuest ? (
-              <p className="achievement-empty">
-                Create an account to unlock and save achievements.
-              </p>
-            ) : achievements.length === 0 ? (
-              <p className="achievement-empty">
-                🌱 No achievements unlocked yet. Complete your first level to earn one!
-              </p>
-            ) : (
+    fetchProfile();
+  }, [screen]);
 
-              <div className="achievement-grid">
-                {ALL_ACHIEVEMENTS.map((item) => {
-                  const isUnlocked = achievements.some(
-                    achievement =>
-                      achievement.achievementId === item.achievementId
-                  );
 
-                  const unlockedItem = achievements.find(
-                    achievement =>
-                      achievement.achievementId === item.achievementId
-                  );
-
-                  return (
-                    <article
-                      className={`achievement-card ${isUnlocked ? 'unlocked' : 'locked'}`}
-                      key={item.achievementId}
-                    >
-                      <span className="achievement-icon">
-                        {isUnlocked ? item.icon : '🔒'}
-                      </span>
-
-                      <div className="achievement-info">
-                        <h3>{item.title}</h3>
-
-                        <small>
-                          {isUnlocked
-                            ? `Unlocked on ${new Date(
-                              unlockedItem.unlockedAt
-                            ).toLocaleDateString()}`
-                            : item.description}
-                        </small>
-
-                        <span className="achievement-reward">
-                          🪙 {item.reward} Coins
-                        </span>
-                      </div>
-
-                      <span className="achievement-check">
-                        {isUnlocked ? '✓' : '🔐'}
-                      </span>
-                    </article>
-                  );
-                })}
-              </div>
-
+  return (
+    <main className="app-shell">
+      {screen === 'auth' ? (
+        <header className="site-header auth-site-header">
+          <button className="brand" onClick={startGuestSession} aria-label="Play as guest">
+            <span className="brand-mark">🐛</span>
+            <span>APPLE WORM <b>ADVENTURE</b></span>
+          </button>
+          <span className="auth-header-note">Your next little big adventure</span>
+          <button className="nav-play" onClick={startGuestSession}>Play as Guest <span>↗</span></button>
+        </header>
+      ) : (
+        <header className="site-header">
+          <button className="brand" onClick={goHome} aria-label="Go to home">
+            <span className="brand-mark">🐛</span>
+            <span>APPLE WORM <b>ADVENTURE</b></span>
+          </button>
+          <nav className="main-nav" aria-label="Main navigation">
+            <button className={screen === 'home' ? 'active' : ''} onClick={goHome}>Home</button>
+            <button onClick={() => { setScreen('home'); window.setTimeout(() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }), 80) }}>How to play</button>
+            <button className={screen === 'levels' ? 'active' : ''} onClick={() => setScreen('levels')}>Levels</button>
+            <button onClick={() => { setScreen('home'); window.setTimeout(() => document.getElementById('player-stats')?.scrollIntoView({ behavior: 'smooth' }), 80) }}>Saved progress</button>
+            <button onClick={() => { setScreen('home'); window.setTimeout(() => document.getElementById('player-stats')?.scrollIntoView({ behavior: 'smooth' }), 80) }}>Profile</button>
+            {!isGuest && (
+              <button className="nav-logout nav-logout-inline" onClick={handleLogout} title="Logout from your account">
+                <span aria-hidden="true">↪</span> Logout
+              </button>
             )}
+          </nav>
+          <div className="header-actions">
+            {isGuest ? (
+              <button className="nav-play" onClick={() => setScreen('auth')}>Login / Register <span>↗</span></button>
+            ) : (
+              <button className="nav-play" onClick={() => setScreen('levels')}>Play now <span>↗</span></button>
+            )}
+          </div>
+        </header>
+      )}
+
+      {screen === 'auth' && (
+        <div className="auth-screen">
+          <Auth
+            onLoginSuccess={(user) => {
+              setIsGuest(false)
+              setAuthUser(user)
+              setScreen('home')
+            }}
+          />
+          <div className="guest-entry">
+            <span>Just want to try the game?</span>
+            <button type="button" className="guest-play-button" onClick={startGuestSession}>Play as Guest <span>→</span></button>
+            <small>Guest progress stays on this device. Create an account to save future progress to your account and access rewards.</small>
+          </div>
+          <footer className="site-footer">THINK • WIGGLE • WIN</footer>
+        </div>
+      )}
+
+
+
+      {screen === 'home' && (
+        <>
+          <section className="hero-section" id="home">
+            <div className="hero-copy">
+              <div className="hero-kicker"><span>✦</span> YOUR NEXT LITTLE BIG ADVENTURE</div>
+              <h1>Ready, set,<br /><em>SLITHER!</em></h1>
+              <p className="hero-description">Meet your new wiggly best friend. Collect shiny apples, solve clever puzzles and find your way to the portal!</p>
+              <div className="hero-actions">
+                <button className="primary-cta" onClick={() => setScreen('levels')}>Play for free <span>→</span></button>
+                <a className="text-link" href="#features">How to play <span>↓</span></a>
+              </div>
+              <div className="hero-proof"><span className="mini-avatar">🐸</span><span className="mini-avatar">🐻</span><span className="mini-avatar">🐼</span><p><b>Big fun. Tiny worm.</b><small>One clever move at a time.</small></p></div>
+            </div>
+
+            <div className="hero-visual" aria-label="Apple Worm Adventure game illustration">
+              <div className="sun-orb">☀️</div>
+              <span className="cloud cloud-one">☁️</span><span className="cloud cloud-two">☁️</span>
+              <span className="floating-star star-one">★</span><span className="floating-star star-two">✦</span>
+              <div className="scene-hill hill-back"></div><div className="scene-hill hill-front"></div>
+              <div className="scene-worm"><span className="worm-face">🐛</span><span className="worm-body">🟢</span><span className="worm-body">🟢</span></div>
+              <div className="scene-apple">🍎<span>✦</span></div>
+              <div className="scene-portal"><span>✦</span><small>GOAL</small></div>
+              <div className="scene-level-card"><span className="level-icon">🧩</span><span><b>LEVEL 01</b><small>The first bite</small></span><strong>★</strong></div>
+              <div className="scene-caption">🍃 &nbsp; THINK · WIGGLE · WIN &nbsp; 🍃</div>
+            </div>
           </section>
 
-          {isGuest && <p className="guest-notice">You’re playing as a guest. Your levels and stars are saved on this device. <button type="button" onClick={() => setScreen('auth')}>Create an account to save future progress</button>.</p>}
-        </section>
+          <section className="player-panel" id="player-stats">
+            <div className="player-heading"><div><span className="section-kicker">YOUR ADVENTURE</span><h2>
+              {isGuest
+                ? 'Welcome, Guest!'
+                : `Welcome back, ${profile?.name || authUser?.name || 'Player'}!`} 👋
+            </h2></div><span className="online-pill"><i></i> {isGuest ? 'GUEST MODE' : 'PLAYER PROFILE'}</span></div>
+            <div className="player-metrics">
+              <div className="metric-card"><span>✉️</span><small>EMAIL</small><b>{isGuest ? 'Saved on this device' : (profile?.email || authUser?.email || 'Player account')}</b></div>
+              <div className="metric-card"><span>🪙</span><small>COINS</small><b>{isGuest ? 'Account required' : coins}</b></div>
+              <div className="metric-card"><span>🏆</span><small>BEST SCORE</small><b>{isGuest ? score : (profile?.totalScore ?? 0)}</b></div>
+              <div className="metric-card"><span>🎯</span><small>LEVELS COMPLETED</small><b>{completed.length}</b></div>
+            </div>
 
-        <section className="feature-section" id="features">
-          <div><span className="section-kicker">A WORLD OF WIGGLES</span><h2>Small worm. <em>Big adventures.</em></h2><p>Plan your path, grab every apple and make it safely to the portal.</p></div>
-          <div className="feature-grid">
-            <article className="feature-card"><span>🍎</span><h3>Collect apples</h3><p>Find the fruit to grow and unlock your way forward.</p></article>
-            <article className="feature-card"><span>🧠</span><h3>Solve puzzles</h3><p>Think ahead and move carefully around obstacles.</p></article>
-            <article className="feature-card"><span>⭐</span><h3>Earn rewards</h3><p>Complete levels, collect stars and build your score.</p></article>
-          </div>
-        </section>
-        <footer className="site-footer">APPLE WORM ADVENTURE <span>·</span> THINK • MOVE • GROW</footer>
-      </>
-    )}
 
-    {screen === 'levels' && (
-      <section className="content-screen">
-        <div className="screen-topline"><button className="back-link" onClick={goHome}>← Home</button><span className="section-kicker">YOUR ADVENTURE</span></div>
-        <div className="screen-heading"><h1>Choose your <em>level.</em></h1><p>Complete a puzzle to unlock the next level.</p></div>
-        <div className="level-grid">
-          {LEVELS.map((item, index) => {
-            const isUnlocked = index < unlocked
-            const isCompleted = completed.includes(index)
-            const earnedStars = Number(levelStars[index]) || 0
-            return (
-              <button key={index} className={`level-button level-card ${isCompleted ? 'level-completed' : ''} ${!isUnlocked ? 'level-locked' : ''}`} disabled={!isUnlocked} onClick={() => openLevel(index)}>
-                <span className="level-card-top"><span className="level-number">LEVEL {String(index + 1).padStart(2, '0')}</span><span className="level-state">{isCompleted ? '✓' : isUnlocked ? '↗' : '🔒'}</span></span>
-                <strong className="level-card-art">{isCompleted ? (earnedStars > 0 ? '⭐'.repeat(earnedStars) : '☆') : isUnlocked ? '🐛' : '🔒'}</strong>
-                <span className="level-card-title">{item.name || `Level ${index + 1}`}</span>
-                <small>{isCompleted ? 'Completed' : isUnlocked ? 'Ready to play' : 'Complete previous level'}</small>
-                <span className="level-card-bottom"><span>{isCompleted ? 'Replay level' : isUnlocked ? 'Start puzzle' : 'Locked'}</span><b>→</b></span>
-              </button>
-            )
-          })}
-        </div>
-        <button className="secondary-button" onClick={resetProgress}>Reset Saved Progress</button>
-      </section>
-    )}
-
-    {screen === 'game' && (
-      <section className="content-screen play-area">
-        <div className="screen-topline"><button className="back-link" onClick={() => setScreen('levels')}>← All levels</button><span className="section-kicker">LEVEL {level + 1} / {LEVELS.length}</span></div>
-        <div className="screen-heading"><h1>Apple Worm <em>Adventure</em></h1><p>{won ? '🎉 Level completed!' : appleEaten ? 'Great! Now reach the green portal.' : 'Collect the apple, then reach the portal.'}</p></div>
-        <div className="game-stats"><span>🍎 {appleEaten ? 'Collected' : 'Not collected'}</span><span>👣 Moves: {moves}</span><span>🏆 Score: {score}</span><span>⭐ Stars: {stars}</span><span>🥇 Best: {bestMoves[level] ?? '—'}</span></div>
-        <div className="board board-scenic" role="grid" aria-label={`Level ${level + 1}`}>
-          {Array.from({ length: 56 }, (_, i) => {
-            const x = i % 8, y = Math.floor(i / 8)
-            const isWorm = worm.some(p => p.x === x && p.y === y)
-            const isHead = worm[0].x === x && worm[0].y === y
-            const isWall = current.walls.some(p => p.x === x && p.y === y)
-            const isApple = !appleEaten && current.apple.x === x && current.apple.y === y
-            const isPortal = current.portal.x === x && current.portal.y === y
-            return (
-              <div
-                key={i}
-                className={['cell', isWorm ? 'worm-cell' : '', isHead ? 'worm-head' : '', isWall ? 'wall-cell' : '', isApple ? 'apple-cell' : '', isPortal ? 'portal-cell' : ''].join(' ')}
-                role="gridcell"
-                aria-label={isWall ? 'Wooden obstacle' : isHead ? 'Worm head' : isWorm ? 'Worm body' : isApple ? 'Apple' : isPortal ? 'Portal' : 'Empty tile'}
-              >
-                {isWall && <span className="wood-grain" aria-hidden="true" />}
-                {isWorm && <span className={`worm-sprite ${isHead ? 'worm-sprite-head' : 'worm-sprite-body'}`} aria-hidden="true">{isHead ? '🐛' : ''}</span>}
-                {isApple && <span className="apple-sprite" aria-hidden="true">🍎</span>}
-                {isPortal && <span className={`portal-sprite ${won ? 'portal-sprite-won' : ''}`} aria-hidden="true">{won ? '✨' : '🌀'}</span>}
+            <section className="achievement-section">
+              <div className="achievement-heading">
+                <span className="section-kicker">YOUR MILESTONES</span>
+                <h2>🏆 Achievements</h2>
+                <p>Celebrate your progress and every little victory!</p>
               </div>
-            )
-          })}
-        </div>
-        <p className="game-help">Use arrow keys or the buttons below.</p>
-        <div className="daily-challenge"><div className="coins-display">🪙 {isGuest ? 'Guest mode — rewards locked' : `Total Coins: ${coins}`}</div><h3>🎁 Daily Challenge</h3><p>Complete a level and claim your daily bonus!</p><button className="primary-cta" onClick={claimDailyReward} disabled={!isGuest && (!dailyChallengeUnlocked || dailyRewardClaimed)}>{isGuest ? '🔐 Create Account to Claim' : dailyRewardClaimed ? '✅ Reward Claimed Today' : dailyChallengeUnlocked ? '🎁 Claim 50 Bonus Coins' : '🔒 Complete a Level to Unlock'}</button>{dailyMessage && <p>{dailyMessage}</p>}</div>
-        <div className="reward-history">
-          <h3>🏆 Reward History</h3>
 
-          {rewardHistory.length === 0 ? (
-            <p>No rewards claimed yet.</p>
-          ) : (
-            <div className="reward-history-list">
-              {rewardHistory.slice().reverse().map((reward, index) => (
-                <div className="reward-history-item" key={index}>
-                  <span>
-                    {reward.type === 'daily' ? '🎁 Daily Reward' :
-                      reward.type === 'achievement' ? '🏆 Achievement' :
-                        reward.type === 'ad' ? '📺 Ad Reward' :
-                          '⭐ Level Reward'}
-                  </span>
+              {isGuest ? (
+                <p className="achievement-empty">
+                  Create an account to unlock and save achievements.
+                </p>
+              ) : achievements.length === 0 ? (
+                <p className="achievement-empty">
+                  🌱 No achievements unlocked yet. Complete your first level to earn one!
+                </p>
+              ) : (
 
-                  <strong>+{reward.coins} 🪙</strong>
+                <div className="achievement-grid">
+                  {ALL_ACHIEVEMENTS.map((item) => {
+                    const isUnlocked = achievements.some(
+                      achievement =>
+                        achievement.achievementId === item.achievementId
+                    );
 
-                  <small>
-                    {new Date(reward.date).toLocaleDateString()}
-                  </small>
+                    const unlockedItem = achievements.find(
+                      achievement =>
+                        achievement.achievementId === item.achievementId
+                    );
+
+                    return (
+                      <article
+                        className={`achievement-card ${isUnlocked ? 'unlocked' : 'locked'}`}
+                        key={item.achievementId}
+                      >
+                        <span className="achievement-icon">
+                          {isUnlocked ? item.icon : '🔒'}
+                        </span>
+
+                        <div className="achievement-info">
+                          <h3>{item.title}</h3>
+
+                          <small>
+                            {isUnlocked
+                              ? `Unlocked on ${new Date(
+                                unlockedItem.unlockedAt
+                              ).toLocaleDateString()}`
+                              : item.description}
+                          </small>
+
+                          <span className="achievement-reward">
+                            🪙 {item.reward} Coins
+                          </span>
+                        </div>
+
+                        <span className="achievement-check">
+                          {isUnlocked ? '✓' : '🔐'}
+                        </span>
+                      </article>
+                    );
+                  })}
                 </div>
-              ))}
+
+              )}
+            </section>
+
+            {isGuest && <p className="guest-notice">You’re playing as a guest. Your levels and stars are saved on this device. <button type="button" onClick={() => setScreen('auth')}>Create an account to save future progress</button>.</p>}
+          </section>
+
+          <section className="feature-section" id="features">
+            <div><span className="section-kicker">A WORLD OF WIGGLES</span><h2>Small worm. <em>Big adventures.</em></h2><p>Plan your path, grab every apple and make it safely to the portal.</p></div>
+            <div className="feature-grid">
+              <article className="feature-card"><span>🍎</span><h3>Collect apples</h3><p>Find the fruit to grow and unlock your way forward.</p></article>
+              <article className="feature-card"><span>🧠</span><h3>Solve puzzles</h3><p>Think ahead and move carefully around obstacles.</p></article>
+              <article className="feature-card"><span>⭐</span><h3>Earn rewards</h3><p>Complete levels, collect stars and build your score.</p></article>
+            </div>
+          </section>
+          <footer className="site-footer">APPLE WORM ADVENTURE <span>·</span> THINK • MOVE • GROW</footer>
+        </>
+      )}
+
+      {screen === 'levels' && (
+        <section className="content-screen">
+          <div className="screen-topline"><button className="back-link" onClick={goHome}>← Home</button><span className="section-kicker">YOUR ADVENTURE</span></div>
+          <div className="screen-heading"><h1>Choose your <em>level.</em></h1><p>Complete a puzzle to unlock the next level.</p></div>
+          <div className="level-grid">
+            {LEVELS.map((item, index) => {
+              const isUnlocked = index < unlocked
+              const isCompleted = completed.includes(index)
+              const earnedStars = Number(levelStars[index]) || 0
+              return (
+                <button key={index} className={`level-button level-card ${isCompleted ? 'level-completed' : ''} ${!isUnlocked ? 'level-locked' : ''}`} disabled={!isUnlocked} onClick={() => openLevel(index)}>
+                  <span className="level-card-top"><span className="level-number">LEVEL {String(index + 1).padStart(2, '0')}</span><span className="level-state">{isCompleted ? '✓' : isUnlocked ? '↗' : '🔒'}</span></span>
+                  <strong className="level-card-art">{isCompleted ? (earnedStars > 0 ? '⭐'.repeat(earnedStars) : '☆') : isUnlocked ? '🐛' : '🔒'}</strong>
+                  <span className="level-card-title">{item.name || `Level ${index + 1}`}</span>
+                  <small>{isCompleted ? 'Completed' : isUnlocked ? 'Ready to play' : 'Complete previous level'}</small>
+                  <span className="level-card-bottom"><span>{isCompleted ? 'Replay level' : isUnlocked ? 'Start puzzle' : 'Locked'}</span><b>→</b></span>
+                </button>
+              )
+            })}
+          </div>
+          <button className="secondary-button" onClick={resetProgress}>Reset Saved Progress</button>
+        </section>
+      )}
+
+      {screen === 'game' && (
+        <section className="content-screen play-area">
+          <div className="screen-topline"><button className="back-link" onClick={() => setScreen('levels')}>← All levels</button><span className="section-kicker">LEVEL {level + 1} / {LEVELS.length}</span></div>
+          <div className="screen-heading"><h1>Apple Worm <em>Adventure</em></h1><p>{won ? '🎉 Level completed!' : appleEaten ? 'Great! Now reach the green portal.' : 'Collect the apple, then reach the portal.'}</p></div>
+          <div className="game-stats"><span>🍎 {appleEaten ? 'Collected' : 'Not collected'}</span><span>👣 Moves: {moves}</span><span>🏆 Score: {score}</span><span>⭐ Stars: {stars}</span><span>🥇 Best: {bestMoves[level] ?? '—'}</span></div>
+          <div className="board board-scenic" role="grid" aria-label={`Level ${level + 1}`}>
+            {Array.from({ length: 56 }, (_, i) => {
+              const x = i % 8, y = Math.floor(i / 8)
+              const isWorm = worm.some(p => p.x === x && p.y === y)
+              const isHead = worm[0].x === x && worm[0].y === y
+              const isWall = current.walls.some(p => p.x === x && p.y === y)
+              const isApple = !appleEaten && current.apple.x === x && current.apple.y === y
+              const isPortal = current.portal.x === x && current.portal.y === y
+              return (
+                <div
+                  key={i}
+                  className={['cell', isWorm ? 'worm-cell' : '', isHead ? 'worm-head' : '', isWall ? 'wall-cell' : '', isApple ? 'apple-cell' : '', isPortal ? 'portal-cell' : ''].join(' ')}
+                  role="gridcell"
+                  aria-label={isWall ? 'Wooden obstacle' : isHead ? 'Worm head' : isWorm ? 'Worm body' : isApple ? 'Apple' : isPortal ? 'Portal' : 'Empty tile'}
+                >
+                  {isWall && <span className="wood-grain" aria-hidden="true" />}
+                  {isWorm && <span className={`worm-sprite ${isHead ? 'worm-sprite-head' : 'worm-sprite-body'}`} aria-hidden="true">{isHead ? '🐛' : ''}</span>}
+                  {isApple && <span className="apple-sprite" aria-hidden="true">🍎</span>}
+                  {isPortal && <span className={`portal-sprite ${won ? 'portal-sprite-won' : ''}`} aria-hidden="true">{won ? '✨' : '🌀'}</span>}
+                </div>
+              )
+            })}
+          </div>
+          <p className="game-help">Use arrow keys or the buttons below.</p>
+          <div className="daily-challenge"><div className="coins-display">🪙 {isGuest ? 'Guest mode — rewards locked' : `Total Coins: ${coins}`}</div><h3>🎁 Daily Challenge</h3><p>Complete a level and claim your daily bonus!</p><button className="primary-cta" onClick={claimDailyReward} disabled={!isGuest && (!dailyChallengeUnlocked || dailyRewardClaimed)}>{isGuest ? '🔐 Create Account to Claim' : dailyRewardClaimed ? '✅ Reward Claimed Today' : dailyChallengeUnlocked ? '🎁 Claim 50 Bonus Coins' : '🔒 Complete a Level to Unlock'}</button>{dailyMessage && <p>{dailyMessage}</p>}</div>
+          <div className="reward-history">
+            <h3>🏆 Reward History</h3>
+
+            {rewardHistory.length === 0 ? (
+              <p>No rewards claimed yet.</p>
+            ) : (
+              <div className="reward-history-list">
+                {rewardHistory.slice().reverse().map((reward, index) => (
+                  <div className="reward-history-item" key={index}>
+                    <span>
+                      {reward.type === 'daily' ? '🎁 Daily Reward' :
+                        reward.type === 'achievement' ? '🏆 Achievement' :
+                          reward.type === 'ad' ? '📺 Ad Reward' :
+                            '⭐ Level Reward'}
+                    </span>
+
+                    <strong>+{reward.coins} 🪙</strong>
+
+                    <small>
+                      {new Date(reward.date).toLocaleDateString()}
+                    </small>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="game-tools"><button className="secondary-button" onClick={toggleSound}>{soundOn ? '🔊 Sound On' : '🔇 Sound Off'}</button><button className="secondary-button" onClick={showHint} disabled={won}>💡 Get Hint (10 coins)</button></div>
+          {hint && <p className="hint-message">{hint}</p>}
+          <div className="direction-pad"><button onClick={() => moveWorm(0, -1)} aria-label="Move up">⬆️</button><div><button onClick={() => moveWorm(-1, 0)} aria-label="Move left">⬅️</button><button onClick={() => moveWorm(0, 1)} aria-label="Move down">⬇️</button><button onClick={() => moveWorm(1, 0)} aria-label="Move right">➡️</button></div></div>
+          {gameOver && (
+            <div className="failure-overlay">
+              <div className="failure-card">
+                <div className="failure-icon">💔</div>
+                <span className="failure-kicker">DON'T GIVE UP, WORM EXPLORER!</span>
+                <h2>Oops! Try again</h2>
+                <p>Your worm bumped into an obstacle. Every puzzle is a new chance to win.</p>
+                <div className="failure-stats">
+                  <div><strong>👣 {moves}</strong><small>Moves made</small></div>
+                  <div><strong>🍎 {appleEaten ? '1 / 1' : '0 / 1'}</strong><small>Apples found</small></div>
+                </div>
+                <button className="failure-retry" onClick={() => resetLevel()}>↻ Try Again</button>
+                <button className="failure-revive" onClick={() => {
+                  console.log('REVIVE BUTTON CLICKED');
+                  reviveGame();
+                }} disabled={!isGuest && coins < REVIVE_COST}>💚 {isGuest ? 'Create Account to Revive' : 'Revive · 20 Coins'}</button>
+                <button className="failure-levels" onClick={() => setScreen('levels')}>Choose another level</button>
+              </div>
             </div>
           )}
-        </div>
-        <div className="game-tools"><button className="secondary-button" onClick={toggleSound}>{soundOn ? '🔊 Sound On' : '🔇 Sound Off'}</button><button className="secondary-button" onClick={showHint} disabled={won}>💡 Get Hint (10 coins)</button></div>
-        {hint && <p className="hint-message">{hint}</p>}
-        <div className="direction-pad"><button onClick={() => moveWorm(0, -1)} aria-label="Move up">⬆️</button><div><button onClick={() => moveWorm(-1, 0)} aria-label="Move left">⬅️</button><button onClick={() => moveWorm(0, 1)} aria-label="Move down">⬇️</button><button onClick={() => moveWorm(1, 0)} aria-label="Move right">➡️</button></div></div>
-        {gameOver && (
-          <div className="failure-overlay">
-            <div className="failure-card">
-              <div className="failure-icon">💔</div>
-              <span className="failure-kicker">DON'T GIVE UP, WORM EXPLORER!</span>
-              <h2>Oops! Try again</h2>
-              <p>Your worm bumped into an obstacle. Every puzzle is a new chance to win.</p>
-              <div className="failure-stats">
-                <div><strong>👣 {moves}</strong><small>Moves made</small></div>
-                <div><strong>🍎 {appleEaten ? '1 / 1' : '0 / 1'}</strong><small>Apples found</small></div>
-              </div>
-              <button className="failure-retry" onClick={() => resetLevel()}>↻ Try Again</button>
-              <button className="failure-revive" onClick={() => {
-                console.log('REVIVE BUTTON CLICKED');
-                reviveGame();
-              }} disabled={!isGuest && coins < REVIVE_COST}>💚 {isGuest ? 'Create Account to Revive' : 'Revive · 20 Coins'}</button>
-              <button className="failure-levels" onClick={() => setScreen('levels')}>Choose another level</button>
-            </div>
-          </div>
-        )}
-        {won && <div className="welcome-message"><div className="confetti-container">{Array.from({ length: 45 }, (_, i) => <span key={i} className="confetti-piece" style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i % 10) * 0.12}s` }} />)}</div><h2>⭐ Level {level + 1} complete!</h2><p>Stars earned: {'⭐'.repeat(Number(levelStars[level]) || 0)}</p><button className="secondary-button" onClick={doubleScore} disabled={scoreDoubled}>{scoreDoubled ? '✅ Score Doubled!' : '🎉 Double My Score'}</button><button className="primary-cta" onClick={() => setScreen('levels')}>Choose Next Level →</button></div>}
-        {!gameOver && !won && <div className="game-actions"><button className="primary-cta" onClick={() => resetLevel()}>↻ Restart Level</button><button className="secondary-button" onClick={() => setScreen('levels')}>Level Selection</button><button className="secondary-button" onClick={goHome}>Back to Home</button></div>}
-      </section>
-    )}
-  </main>
-)
+          {won && <div className="welcome-message"><div className="confetti-container">{Array.from({ length: 45 }, (_, i) => <span key={i} className="confetti-piece" style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i % 10) * 0.12}s` }} />)}</div><h2>⭐ Level {level + 1} complete!</h2><p>Stars earned: {'⭐'.repeat(Number(levelStars[level]) || 0)}</p><button className="secondary-button" onClick={doubleScore} disabled={scoreDoubled}>{scoreDoubled ? '✅ Score Doubled!' : '🎉 Double My Score'}</button><button className="primary-cta" onClick={() => setScreen('levels')}>Choose Next Level →</button></div>}
+          {!gameOver && !won && <div className="game-actions"><button className="primary-cta" onClick={() => resetLevel()}>↻ Restart Level</button><button className="secondary-button" onClick={() => setScreen('levels')}>Level Selection</button><button className="secondary-button" onClick={goHome}>Back to Home</button></div>}
+        </section>
+      )}
+    </main>
+  )
 }
 
 export default App
