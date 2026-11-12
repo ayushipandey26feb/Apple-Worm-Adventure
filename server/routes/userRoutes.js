@@ -145,7 +145,6 @@ router.put('/progress', authMiddleware, async (req, res) => {
             bestMoves,
             score,
             moves,
-            totalScore
         } = req.body;
 
         // Validate incoming progress
@@ -161,9 +160,8 @@ router.put('/progress', authMiddleware, async (req, res) => {
             !Number.isFinite(score) ||
             score < 0 ||
             !Number.isFinite(moves) ||
-            moves < 1 ||
-            !Number.isFinite(totalScore) ||
-            totalScore < 0
+            moves < 1
+           
         ) {
             return res.status(400).json({
                 message: 'Invalid game progress data'
