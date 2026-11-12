@@ -140,20 +140,19 @@ router.get('/profile', authMiddleware, async (req, res) => {
 router.put('/progress', authMiddleware, async (req, res) => {
     try {
         const {
-            totalScore,
-            completedLevels,
             levelId,
             stars,
             bestMoves,
             score,
-            moves
+            moves,
+            totalScore
         } = req.body;
 
         // Validate incoming progress
         if (
             !Number.isInteger(levelId) ||
-            levelId < 0 ||
-            levelId >= 50 ||
+            levelId < 1 ||
+            levelId > 50 ||
             !Number.isInteger(stars) ||
             stars < 1 ||
             stars > 3 ||
@@ -184,6 +183,9 @@ router.put('/progress', authMiddleware, async (req, res) => {
             item => item.levelId === levelId
         );
 
+        const previousLevelScore = levelData?.score || 0;
+        const isNewLevelCompletion = !levelData || !levelData.completed;
+
         if (!levelData) {
             user.levelProgress.push({
                 levelId,
@@ -203,15 +205,30 @@ router.put('/progress', authMiddleware, async (req, res) => {
         }
 
         // Update overall progress
-        user.totalScore = Math.max(user.totalScore || 0, totalScore);
-        user.coins = (user.coins || 0) + score;
-        user.completedLevels = user.levelProgress.filter(
-            item => item.completed
-        ).length;
+        const newBestScore = Math.max(previousLevelScore, score);
+
+        user.totalScore = (user.totalScore || 0) +
+            (newBestScore - previousLevelScore);
+
+        if (isNewLevelCompletion && score > 0) {
+            user.coins = (user.coins || 0) + score;
+
+            user.rewardHistory.push({
+                type: 'level',
+                coins: score,
+                date: new Date()
+            });
+        }
+
+        user.completedLevels = new Set(
+            user.levelProgress
+                .filter(item => item.completed)
+                .map(item => item.levelId)
+        ).size;
 
         user.unlockedLevels = Math.max(
             user.unlockedLevels || 1,
-            Math.min(50, levelId + 2)
+            Math.min(50, levelId + 1)
         );
 
         user.lastPlayedAt = new Date();
