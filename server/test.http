@@ -1,0 +1,54 @@
+POST http://localhost:5000/api/users/login
+Content-Type: application/json
+
+{
+    "email": "testplayer@gmail.com",
+    "password": "Test123456"
+}
+
+### USER PROFILE
+GET http://localhost:5000/api/users/profile
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2YWU2MTdiZDFkNTdmNDVmMmVkYzdlNzUiLCJpYXQiOjE3OTM1MTA1NzksImV4cCI6MTc5NDExNTM3OX0.bMoW0NYPP8HxbLiWAK2NzYBHxO_o2s9e-P1Gwy0gc-0
+
+### SAVE GAME PROGRESS
+PUT http://localhost:5000/api/users/progress
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2YWU2MTdiZDFkNTdmNDVmMmVkYzdlNzUiLCJpYXQiOjE3OTM1MTA1NzksImV4cCI6MTc5NDExNTM3OX0.bMoW0NYPP8HxbLiWAK2NzYBHxO_o2s9e-P1Gwy0gc-0
+
+{
+    "totalScore": 150,
+    "completedLevels": 3
+}
+
+### SPEND COINS
+POST http://localhost:5000/api/users/coins/spend
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2YWU2MTdiZDFkNTdmNDVmMmVkYzdlNzUiLCJpYXQiOjE3OTM1MTA1NzksImV4cCI6MTc5NDExNTM3OX0.bMoW0NYPP8HxbLiWAK2NzYBHxO_o2s9e-P1Gwy0gc-0
+
+
+{
+    "amount": 30
+}
+
+### CLAIM DAILY REWARD
+POST http://localhost:5000/api/users/daily-reward
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2YWU2MTdiZDFkNTdmNDVmMmVkYzdlNzUiLCJpYXQiOjE3OTM1MTA1NzksImV4cCI6MTc5NDExNTM3OX0.bMoW0NYPP8HxbLiWAK2NzYBHxO_o2s9e-P1Gwy0gc-0
+
+
+### UNLOCK ACHIEVEMENT
+POST http://localhost:5000/api/users/achievements/unlock
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2YWU2MTdiZDFkNTdmNDVmMmVkYzdlNzUiLCJpYXQiOjE3OTM1MTA1NzksImV4cCI6MTc5NDExNTM3OX0.bMoW0NYPP8HxbLiWAK2NzYBHxO_o2s9e-P1Gwy0gc-0
+
+{
+    "achievementId": "first_level",
+    "title": "First Level Completed"
+}
+
+### GET REWARD HISTORY
+GET http://localhost:5000/api/users/reward-history
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2YWU2MTdiZDFkNTdmNDVmMmVkYzdlNzUiLCJpYXQiOjE3OTM1MTA1NzksImV4cCI6MTc5NDExNTM3OX0.bMoW0NYPP8HxbLiWAK2NzYBHxO_o2s9e-P1Gwy0gc-0
+
+### GET LEADERBOARD
+GET http://localhost:5000/api/users/leaderboard
