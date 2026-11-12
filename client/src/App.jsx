@@ -571,7 +571,7 @@ function App() {
         apiRequest('/users/progress', {
           method: 'PUT',
           body: JSON.stringify({
-            levelId: level,
+            levelId: level + 1,
             stars: earnedStars,
             bestMoves: movesToFinish,
             score: earnedScore,
