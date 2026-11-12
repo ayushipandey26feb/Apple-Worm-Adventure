@@ -45,9 +45,10 @@ router.post('/register', async (req, res) => {
         });
 
     } catch (error) {
+        console.error('Registration error:', error);
+
         res.status(500).json({
-            message: 'Registration failed',
-            error: error.message
+            message: 'Registration failed'
         });
     }
 });
@@ -100,9 +101,10 @@ router.post('/login', async (req, res) => {
         });
 
     } catch (error) {
+        console.error('Login error:', error);
+
         res.status(500).json({
-            message: 'Login failed',
-            error: error.message
+            message: 'Login failed'
         });
     }
 });
@@ -124,9 +126,10 @@ router.get('/profile', authMiddleware, async (req, res) => {
         });
 
     } catch (error) {
+        console.error('Profile fetch error:', error);
+
         res.status(500).json({
-            message: 'Unable to fetch profile',
-            error: error.message
+            message: 'Failed to fetch profile'
         });
     }
 });
@@ -222,10 +225,12 @@ router.put('/progress', authMiddleware, async (req, res) => {
         });
 
         await user.save();
+        const safeUser = user.toObject();
+        delete safeUser.passwordHash;
 
         res.status(200).json({
             message: 'Game progress saved successfully!',
-            user
+            user: safeUser
         });
 
     } catch (error) {
@@ -316,16 +321,130 @@ router.post('/coins/spend', authMiddleware, async (req, res) => {
         });
 
     } catch (error) {
+        console.error('Spend coins error:', error);
+
         res.status(500).json({
-            message: 'Unable to spend coins',
-            error: error.message
+            message: 'Unable to spend coins'
         });
     }
 });
 
+
 // Daily Reward API
 router.post('/daily-reward', authMiddleware, async (req, res) => {
     try {
+        const now = new Date();
+
+        const startOfDay = new Date(now);
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const user = await User.findOneAndUpdate(
+            {
+                _id: req.userId,
+                $or: [
+                    { lastDailyRewardDate: { $lt: startOfDay } },
+                    { lastDailyRewardDate: null }
+                ]
+            },
+            {
+                $inc: { coins: 50 },
+                $set: { lastDailyRewardDate: now },
+                $push: {
+                    rewardHistory: {
+                        type: 'daily',
+                        coins: 50,
+                        date: now
+                    }
+                }
+            },
+            {
+                new: true,
+                runValidators: true
+            }
+        );
+
+        if (!user) {
+            const existingUser = await User.findById(req.userId);
+
+            if (!existingUser) {
+                return res.status(404).json({
+                    message: 'User not found'
+                });
+            }
+
+            return res.status(400).json({
+                message: 'Daily reward already claimed today!'
+            });
+        }
+
+        return res.status(200).json({
+            message: 'Daily reward claimed successfully!',
+            rewardCoins: 50,
+            totalCoins: user.coins
+        });
+
+    } catch (error) {
+        console.error('Daily reward error:', error);
+
+        return res.status(500).json({
+            message: 'Daily reward failed'
+        });
+    }
+});
+
+
+// Achievement Unlock API
+router.post('/achievements/unlock', authMiddleware, async (req, res) => {
+    try {
+        const { achievementId } = req.body;
+
+        if (!achievementId) {
+            return res.status(400).json({
+                message: 'Achievement ID is required'
+            });
+        }
+
+        const achievementRewards = {
+            first_level: {
+                title: 'First Step',
+                coins: 10,
+                requiredLevels: 1
+            },
+            five_levels: {
+                title: 'Rising Star',
+                coins: 20,
+                requiredLevels: 5
+            },
+            ten_levels: {
+                title: 'Worm Champion',
+                coins: 30,
+                requiredLevels: 10
+            },
+            three_star: {
+                title: 'Perfect Player',
+                coins: 20,
+                requiredLevels: 0
+            },
+            twenty_levels: {
+                title: 'Super Explorer',
+                coins: 40,
+                requiredLevels: 20
+            },
+            fifty_levels: {
+                title: 'Legendary Worm',
+                coins: 100,
+                requiredLevels: 50
+            }
+        };
+
+        const achievement = achievementRewards[achievementId];
+
+        if (!achievement) {
+            return res.status(400).json({
+                message: 'Invalid achievement'
+            });
+        }
+
         const user = await User.findById(req.userId);
 
         if (!user) {
@@ -334,115 +453,48 @@ router.post('/daily-reward', authMiddleware, async (req, res) => {
             });
         }
 
-        const now = new Date();
+        const completedLevels = user.levelProgress.filter(
+            level => level.completed
+        );
 
-        if (user.lastDailyRewardDate) {
-            const lastClaim = new Date(user.lastDailyRewardDate);
+        const uniqueCompletedLevels = new Set(
+            completedLevels.map(level => level.levelId)
+        );
 
-            const sameDay =
-                lastClaim.getFullYear() === now.getFullYear() &&
-                lastClaim.getMonth() === now.getMonth() &&
-                lastClaim.getDate() === now.getDate();
+        let eligible = false;
 
-            if (sameDay) {
-                return res.status(400).json({
-                    message: 'Daily reward already claimed today!'
-                });
-            }
+        if (achievementId === 'three_star') {
+            eligible = completedLevels.some(
+                level => level.stars === 3
+            );
+        } else {
+            eligible =
+                uniqueCompletedLevels.size >= achievement.requiredLevels;
         }
 
-        const rewardCoins = 50;
-
-        user.coins += rewardCoins;
-        user.lastDailyRewardDate = now;
-
-        user.rewardHistory.push({
-            type: 'daily',
-            coins: rewardCoins,
-            date: now
-        });
-
-        await user.save();
-
-        res.status(200).json({
-            message: 'Daily reward claimed successfully!',
-            rewardCoins,
-            totalCoins: user.coins
-        });
-
-    } catch (error) {
-        res.status(500).json({
-            message: 'Daily reward failed',
-            error: error.message
-        });
-    }
-});
-
-// Achievement Unlock API
-router.post('/achievements/unlock', authMiddleware, async (req, res) => {
-    try {
-        const { achievementId, title } = req.body;
-
-        if (!achievementId || !title) {
-            return res.status(400).json({
-                message: 'Achievement ID and title are required'
+        if (!eligible) {
+            return res.status(403).json({
+                message: 'Achievement requirements not completed'
             });
         }
 
-
-const achievementRewards = {
-  first_level: {
-    title: 'First Step',
-    coins: 10
-  },
-  five_levels: {
-    title: 'Rising Star',
-    coins: 20
-  },
-  ten_levels: {
-    title: 'Worm Champion',
-    coins: 30
-  },
-  three_star: {
-    title: 'Perfect Player',
-    coins: 20
-  },
-  twenty_levels: {
-    title: 'Super Explorer',
-    coins: 40
-  },
-  fifty_levels: {
-    title: 'Legendary Worm',
-    coins: 100
-  }
-};
-
-
-const achievement = achievementRewards[achievementId];
-
-if (!achievement) {
-  return res.status(400).json({
-    message: 'Invalid achievement'
-  });
-}
-
-
-const rewardCoins = achievement.coins;
-
-const achievementTitle = achievement.title;
+        const rewardCoins = achievement.coins;
+        const achievementTitle = achievement.title;
 
         const updatedUser = await User.findOneAndUpdate(
             {
                 _id: req.userId,
-                'achievements.achievementId': { $ne: achievementId }
+                'achievements.achievementId': {
+                    $ne: achievementId
+                }
             },
             {
                 $push: {
-                   achievements: {
-    achievementId,
-    title: achievementTitle,
-    unlockedAt: new Date()
-},
+                    achievements: {
+                        achievementId,
+                        title: achievementTitle,
+                        unlockedAt: new Date()
+                    },
                     rewardHistory: {
                         type: 'achievement',
                         coins: rewardCoins,
@@ -454,37 +506,30 @@ const achievementTitle = achievement.title;
                 }
             },
             {
-                returnDocument: 'after',
+                new: true,
                 runValidators: true
             }
         );
 
         if (!updatedUser) {
-            const userExists = await User.exists({ _id: req.userId });
-
-            if (!userExists) {
-                return res.status(404).json({
-                    message: 'User not found'
-                });
-            }
-
             return res.status(400).json({
                 message: 'Achievement already unlocked!'
             });
         }
 
-       res.status(200).json({
-    message: 'Achievement unlocked successfully!',
-    achievement: achievementTitle,
-    rewardCoins,
-    totalCoins: updatedUser.coins,
-    achievements: updatedUser.achievements
-});
+        return res.status(200).json({
+            message: 'Achievement unlocked successfully!',
+            achievement: achievementTitle,
+            rewardCoins,
+            totalCoins: updatedUser.coins,
+            achievements: updatedUser.achievements
+        });
 
     } catch (error) {
-        res.status(500).json({
-            message: 'Achievement unlock failed',
-            error: error.message
+        console.error('Achievement unlock error:', error);
+
+        return res.status(500).json({
+            message: 'Achievement unlock failed'
         });
     }
 });
@@ -508,9 +553,10 @@ router.get('/reward-history', authMiddleware, async (req, res) => {
         });
 
     } catch (error) {
+        console.error('Reward history error:', error);
+
         res.status(500).json({
-            message: 'Failed to fetch reward history',
-            error: error.message
+            message: 'Failed to fetch reward history'
         });
     }
 });
@@ -529,9 +575,10 @@ router.get('/leaderboard', async (req, res) => {
         });
 
     } catch (error) {
+        console.error('Leaderboard error:', error);
+
         res.status(500).json({
-            message: 'Failed to fetch leaderboard',
-            error: error.message
+            message: 'Failed to fetch leaderboard'
         });
     }
 });
