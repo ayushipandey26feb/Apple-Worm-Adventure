@@ -515,7 +515,7 @@ function App() {
     setScreen('game')
   }
 
-  const moveWorm = useCallback((dx, dy) => {
+  const moveWorm = useCallback(async (dx, dy) => {
     if (screen !== 'game' || won || gameOver) return
 
     const head = worm[0]
@@ -568,23 +568,24 @@ function App() {
 
       // Save completed game progress to MongoDB
       if (localStorage.getItem('token') && !isGuest) {
-        apiRequest('/users/progress', {
-          method: 'PUT',
-          body: JSON.stringify({
-            levelId: level + 1,
-            stars: earnedStars,
-            bestMoves: movesToFinish,
-            score: earnedScore,
-            moves: movesToFinish,
-            totalScore: (profile?.totalScore || 0) + earnedScore
-          })
-        })
-          .then(data => {
-            console.log('Game progress saved to MongoDB:', data);
-          })
-          .catch(error => {
-            console.error('Progress save failed:', error.message);
+        try {
+          const data = await apiRequest('/users/progress', {
+            method: 'PUT',
+            body: JSON.stringify({
+              levelId: level + 1,
+              stars: earnedStars,
+              bestMoves: movesToFinish,
+              score: earnedScore,
+              moves: movesToFinish,
+              totalScore: (profile?.totalScore || 0) + earnedScore
+            })
           });
+
+          console.log('Game progress saved to MongoDB:', data);
+
+        } catch (error) {
+          console.error('Progress save failed:', error.message);
+        }
       }
     }
 
