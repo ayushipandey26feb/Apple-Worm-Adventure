@@ -564,7 +564,7 @@ function App() {
 
 
     if (reachingPortal) {
-      
+
 
       // Save completed game progress to MongoDB
       if (localStorage.getItem('token') && !isGuest) {
@@ -575,7 +575,8 @@ function App() {
             stars: earnedStars,
             bestMoves: movesToFinish,
             score: earnedScore,
-            moves: movesToFinish
+            moves: movesToFinish,
+            totalScore: (profile?.totalScore || 0) + earnedScore
           })
         })
           .then(data => {

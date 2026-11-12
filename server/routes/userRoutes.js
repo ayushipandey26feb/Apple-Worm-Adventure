@@ -204,6 +204,7 @@ router.put('/progress', authMiddleware, async (req, res) => {
 
         // Update overall progress
         user.totalScore = Math.max(user.totalScore || 0, totalScore);
+        user.coins = (user.coins || 0) + score;
         user.completedLevels = user.levelProgress.filter(
             item => item.completed
         ).length;
