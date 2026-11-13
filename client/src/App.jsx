@@ -400,18 +400,18 @@ function App() {
     }
   }, [screen, soundOn, won, gameOver])
 
-useEffect(() => {
-  const fetchEconomyConfig = async () => {
-    try {
-      const data = await apiRequest('/api/economy/config');
-      setEconomyConfig(data);
-    } catch (error) {
-      console.error('Failed to load economy config:', error);
-    }
-  };
+  useEffect(() => {
+    const fetchEconomyConfig = async () => {
+      try {
+        const data = await apiRequest('/api/economy/config');
+        setEconomyConfig(data);
+      } catch (error) {
+        console.error('Failed to load economy config:', error);
+      }
+    };
 
-  fetchEconomyConfig();
-}, []);
+    fetchEconomyConfig();
+  }, []);
 
   useEffect(() => {
     if (!isGuest) return
@@ -592,6 +592,13 @@ useEffect(() => {
               totalScore: (profile?.totalScore || 0) + earnedScore
             })
           });
+
+          if (data.user) {
+            setCoins(data.user.coins || 0);
+            setProfile(data.user);
+            setAuthUser(data.user);
+            setRewardHistory(data.user.rewardHistory || []);
+          }
 
           console.log('Game progress saved to MongoDB:', data);
 
@@ -871,6 +878,9 @@ useEffect(() => {
 
     const fetchProfile = async () => {
       try {
+
+        const configData = await apiRequest('/api/economy/config');
+        setEconomyConfig(configData);
         const data = await apiRequest('/users/profile');
 
         setProfile(data.user);
@@ -1241,16 +1251,16 @@ useEffect(() => {
             </div>
           )}
           {won && <div className="welcome-message"><div className="confetti-container">{Array.from({ length: 45 }, (_, i) => <span key={i} className="confetti-piece" style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i % 10) * 0.12}s` }} />)}</div><h2>⭐ Level {level + 1} complete!</h2><p>Stars earned: {'⭐'.repeat(Number(levelStars[level]) || 0)}</p><button className="secondary-button" disabled>
-  📺 Double Score — Coming Soon
-</button>
+            📺 Double Score — Coming Soon
+          </button>
 
-<button className="secondary-button" disabled>
-  🪙 Watch Ad → Get 2X Coins — Coming Soon
-</button>
+            <button className="secondary-button" disabled>
+              🪙 Watch Ad → Get 2X Coins — Coming Soon
+            </button>
 
-<p className="hint-message">
-  Rewarded ads will be available after ad provider integration.
-</p><button className="primary-cta" onClick={() => setScreen('levels')}>Choose Next Level →</button></div>}
+            <p className="hint-message">
+              Rewarded ads will be available after ad provider integration.
+            </p><button className="primary-cta" onClick={() => setScreen('levels')}>Choose Next Level →</button></div>}
           {!gameOver && !won && <div className="game-actions"><button className="primary-cta" onClick={() => resetLevel()}>↻ Restart Level</button><button className="secondary-button" onClick={() => setScreen('levels')}>Level Selection</button><button className="secondary-button" onClick={goHome}>Back to Home</button></div>}
         </section>
       )}

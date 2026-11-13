@@ -8,6 +8,7 @@ const adProvider = require('../services/adProvider');
 const RewardTransaction = require('../models/RewardTransaction');
 const economyConfig = require('../config/economyConfig');
 
+
 // Create rewarded ad session
 router.post('/ads/session', authMiddleware, async (req, res) => {
     try {
