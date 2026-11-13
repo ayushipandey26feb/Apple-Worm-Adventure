@@ -4,12 +4,27 @@ const mongoose = require('mongoose');
 require('dotenv').config();
 
 const userRoutes = require('./routes/userRoutes');
+const economyConfig = require('./config/economyConfig');
+
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 app.use('/api/users', userRoutes);
+
+// Server-controlled economy configuration
+app.get('/api/economy/config', (req, res) => {
+    res.json({
+        levelCompletionCoins: economyConfig.levelCompletionCoins,
+        doubleScoreEnabled: economyConfig.rewardedAd.doubleScoreMultiplier > 1,
+        doubleCoinsEnabled: economyConfig.rewardedAd.doubleCoinsMultiplier > 1,
+        reviveEnabled: economyConfig.rewardedAd.reviveEnabled,
+        extraMoves: economyConfig.rewardedAd.extraMoves,
+        hintEnabled: economyConfig.rewardedAd.hintEnabled,
+        dailyRewardedAdCap: economyConfig.rewardedAd.maxRewardedAdsPerDay
+    });
+});
 
 // Test API
 app.get('/', (req, res) => {

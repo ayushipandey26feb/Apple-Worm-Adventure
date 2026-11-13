@@ -4,6 +4,185 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const authMiddleware = require('../middleware/authMiddleware');
+const adProvider = require('../services/adProvider');
+const RewardTransaction = require('../models/RewardTransaction');
+const economyConfig = require('../config/economyConfig');
+
+// Create rewarded ad session
+router.post('/ads/session', authMiddleware, async (req, res) => {
+    try {
+
+        return res.status(503).json({
+            message: 'Rewarded ads are not configured yet. Please try again later.'
+        });
+        const { placement } = req.body;
+
+        const allowed = [
+            'REVIVE',
+            'DOUBLE_SCORE',
+            'DOUBLE_COINS',
+            'EXTRA_MOVES',
+            'HINT',
+            'BOOSTER'
+        ];
+
+        if (!allowed.includes(placement)) {
+            return res.status(400).json({ message: 'Invalid ad placement' });
+        }
+
+        const session = adProvider.createAdSession({
+            userId: req.userId,
+            placement
+        });
+
+        res.status(200).json(session);
+    } catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+});
+
+
+// Verify ad and record reward
+router.post('/ads/claim', authMiddleware, async (req, res) => {
+    try {
+
+        return res.status(503).json({
+            message: 'Rewarded ads are not configured yet. Please try again later.'
+        });
+        const { proofToken, placement, levelId } = req.body;
+
+        const allowed = [
+            'REVIVE',
+            'DOUBLE_SCORE',
+            'DOUBLE_COINS',
+            'EXTRA_MOVES',
+            'HINT',
+            'BOOSTER'
+        ];
+
+        if (!allowed.includes(placement)) {
+            return res.status(400).json({
+                message: 'Invalid ad placement'
+            });
+        }
+
+        // Verify ad session
+        const verification = adProvider.verifyAdCompletion({
+            proofToken,
+            userId: req.userId,
+            placement
+        });
+
+        // Check daily rewarded-ad limit
+        const now = new Date();
+        const startOfDay = new Date(now);
+        startOfDay.setUTCHours(0, 0, 0, 0);
+
+        const dailyAdCount = await RewardTransaction.countDocuments({
+            userId: req.userId,
+            source: 'REWARDED_AD',
+            status: { $in: ['GRANTED', 'APPLIED'] },
+            createdAt: { $gte: startOfDay }
+        });
+
+        if (dailyAdCount >= economyConfig.rewardedAd.maxRewardedAdsPerDay) {
+            return res.status(429).json({
+                message: 'Daily rewarded ad limit reached'
+            });
+        }
+
+        // Check per-level limits where configured
+        const levelLimits = {
+            REVIVE: economyConfig.rewardedAd.maxRevivesPerLevel,
+            DOUBLE_SCORE: economyConfig.rewardedAd.maxDoubleScorePerLevel,
+            DOUBLE_COINS: economyConfig.rewardedAd.maxDoubleCoinsPerLevel
+        };
+
+        const levelLimit = levelLimits[placement];
+
+        if (levelLimit !== undefined) {
+            if (!Number.isInteger(levelId) || levelId < 1 || levelId > 50) {
+                return res.status(400).json({
+                    message: 'Valid levelId is required'
+                });
+            }
+
+            const existingCount = await RewardTransaction.countDocuments({
+                userId: req.userId,
+                levelId,
+                type: placement,
+                status: { $in: ['GRANTED', 'APPLIED'] }
+            });
+
+            if (existingCount >= levelLimit) {
+                return res.status(429).json({
+                    message: `Reward limit reached for ${placement} on this level`
+                });
+            }
+        }
+
+        // Save verified reward record
+        const rewardAmount =
+            placement === 'DOUBLE_COINS'
+                ? economyConfig.levelCompletionCoins
+                : 0;
+
+        const reward = await RewardTransaction.create({
+            userId: req.userId,
+            sessionId: verification.sessionId,
+            levelId,
+            type: placement,
+            amount: rewardAmount,
+            adProvider: verification.provider.toUpperCase(),
+            adEventId: verification.sessionId,
+            status: 'GRANTED'
+        });
+
+        let totalCoins = null;
+
+        if (placement === 'DOUBLE_COINS') {
+            const user = await User.findById(req.userId);
+
+            if (!user) {
+                return res.status(404).json({ message: 'User not found' });
+            }
+
+            user.coins = (user.coins || 0) + rewardAmount;
+
+            user.rewardHistory.push({
+                type: 'ad',
+                coins: rewardAmount,
+                date: new Date()
+            });
+
+            await user.save();
+
+            reward.status = 'APPLIED';
+            await reward.save();
+
+            totalCoins = user.coins;
+        }
+
+        return res.status(200).json({
+            message: 'Reward claimed successfully',
+            reward,
+            bonusCoins: rewardAmount,
+            totalCoins
+        });
+
+    } catch (error) {
+        if (error.code === 11000) {
+            return res.status(409).json({
+                message: 'This ad reward has already been claimed'
+            });
+        }
+
+        return res.status(400).json({
+            message: error.message
+        });
+    }
+});
+
 
 // User Registration API
 router.post('/register', async (req, res) => {
@@ -161,7 +340,7 @@ router.put('/progress', authMiddleware, async (req, res) => {
             score < 0 ||
             !Number.isFinite(moves) ||
             moves < 1
-           
+
         ) {
             return res.status(400).json({
                 message: 'Invalid game progress data'
@@ -208,14 +387,34 @@ router.put('/progress', authMiddleware, async (req, res) => {
         user.totalScore = (user.totalScore || 0) +
             (newBestScore - previousLevelScore);
 
+        let doubleCoinsReward = null;
+
         if (isNewLevelCompletion && score > 0) {
-            user.coins = (user.coins || 0) + score;
+            doubleCoinsReward = await RewardTransaction.findOne({
+                userId: req.userId,
+                levelId,
+                type: 'DOUBLE_COINS',
+                status: 'GRANTED'
+            });
+
+            const multiplier = doubleCoinsReward
+                ? economyConfig.rewardedAd.doubleCoinsMultiplier
+                : 1;
+
+            const coinsEarned = economyConfig.levelCompletionCoins * multiplier;
+
+            user.coins = (user.coins || 0) + coinsEarned;
 
             user.rewardHistory.push({
                 type: 'level',
-                coins: score,
+                coins: coinsEarned,
                 date: new Date()
             });
+
+            if (doubleCoinsReward) {
+                doubleCoinsReward.amount = coinsEarned;
+                doubleCoinsReward.status = 'APPLIED';
+            }
         }
 
         user.completedLevels = new Set(
@@ -241,6 +440,9 @@ router.put('/progress', authMiddleware, async (req, res) => {
         });
 
         await user.save();
+        if (doubleCoinsReward) {
+            await doubleCoinsReward.save();
+        }
         const safeUser = user.toObject();
         delete safeUser.passwordHash;
 
