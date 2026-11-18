@@ -1,131 +1,223 @@
-🍎 Apple Worm Adventure
+ðŸ› Apple Worm Adventure
 
-A fun browser-based puzzle adventure game developed using React, Node.js, Express.js, and MongoDB. Challenge yourself with 50 exciting levels, unlock achievements, collect rewards, and track your gaming progress!
 
-🎮 Features
 
-50 Challenging Levels – Solve puzzles and progress through exciting levels.
+Apple Worm Adventure is a browser-based puzzle game built with React and Python. Guide the worm through challenging levels, collect apples, solve puzzles, and unlock rewards!
 
-User Authentication – Register and log in to save your progress.
 
-Achievements System – Unlock achievements as you complete milestones.
 
-Rewards & Coins – Earn coins through gameplay and rewards.
+ðŸŽ® Features
 
-Daily Rewards – Claim daily bonuses.
 
-Leaderboard – Compare your scores with other players.
 
-Progress Tracking – Save completed levels, stars, and best moves.
+50 Challenging Levels â€“ Explore and complete 50 puzzle levels.
 
-Sound Effects – Enjoy interactive game sounds.
 
-Guest Mode – Explore the game without creating an account.
 
-🛠️ Technologies Used
+User Authentication â€“ Register and log in to your account.
+
+
+
+Game Progress â€“ Save your progress and track your scores.
+
+
+
+Achievements â€“ Unlock achievements through gameplay.
+
+
+
+Coins \& Rewards â€“ Earn and spend coins.
+
+
+
+Daily Rewards â€“ Claim daily bonus rewards.
+
+
+
+Leaderboard â€“ Compare scores with other players.
+
+
+
+Sound Effects â€“ Enjoy an interactive gaming experience.
+
+
+
+ðŸ› ï¸ Tech Stack
+
+
 
 Frontend
 
-React.js
 
-JavaScript
 
-HTML5
+React
 
-CSS3
+
+
+TypeScript
+
+
+
+Vite
+
+
+
+HTML, CSS, JavaScript
+
+
 
 Backend
 
-Node.js
 
-Express.js
+
+Python
+
+
+
+FastAPI
+
+
 
 MongoDB
 
-Mongoose
+
+
+Motor
+
+
 
 JWT Authentication
 
-Tools
 
-Visual Studio Code
 
-Git & GitHub
+ðŸ“ Project Structure
 
-MongoDB Atlas
 
-📁 Project Structure
 
 Apple-Worm-Adventure/
-│
-├── client/
-│   ├── public/
-│   └── src/
-│       ├── assets/
-│       ├── components/
-│       ├── services/
-│       ├── App.jsx
-│       └── App.css
-│
-├── server/
-│   ├── middleware/
-│   ├── models/
-│   ├── routes/
-│   └── index.js
-│
-├── .gitignore
-├── package.json
-└── README.md
 
-🚀 Getting Started
+â”œâ”€â”€ frontend/
 
-1. Clone the Repository
+â”‚   â”œâ”€â”€ src/
+
+â”‚   â”œâ”€â”€ public/
+
+â”‚   â””â”€â”€ package.json
+
+â”œâ”€â”€ backend/
+
+â”‚   â”œâ”€â”€ server.py
+
+â”‚   â”œâ”€â”€ requirements.txt
+
+â”‚   â”œâ”€â”€ routers/
+
+â”‚   â””â”€â”€ .env.example
+
+â”œâ”€â”€ .gitignore
+
+â””â”€â”€ README.md
+
+
+
+ðŸš€ Run Locally
+
+
+
+1\. Clone the repository
+
+
 
 git clone https://github.com/ayushipandey26feb/Apple-Worm-Adventure.git
+
 cd Apple-Worm-Adventure
 
-2. Install Frontend Dependencies
 
-cd client
-npm install
 
-3. Install Backend Dependencies
+2\. Start the backend
+
+
+
+cd backend
+
+python -m venv venv
+
+
+
+Activate the virtual environment on Windows:
+
+
+
+.\\venv\\Scripts\\Activate
+
+
+
+Install dependencies:
+
+
+
+pip install -r requirements.txt
+
+
+
+Create your local environment file:
+
+
+
+Copy-Item .env.example .env
+
+
+
+Update the required environment variables in .env, including your MongoDB connection string and JWT secret.
+
+
+
+Start the backend:
+
+
+
+uvicorn server:app --host 0.0.0.0 --port 8000 --reload
+
+
+
+3\. Start the frontend
+
+
 
 Open another terminal:
 
-cd server
-npm install
 
-4. Configure Environment Variables
 
-Create a .env file inside the server folder and configure your MongoDB connection string and JWT secret.
+cd frontend
 
-5. Run the Backend
+yarn install
 
-cd server
-node index.js
+yarn dev
 
-6. Run the Frontend
 
-In another terminal:
 
-cd client
-npm run dev
+Open the local URL displayed by Vite in your browser.
 
-Open the local URL displayed in your terminal to play the game.
 
-🌱 Future Improvements
 
-Responsive design for mobile and tablet devices.
+ðŸ” Environment Variables
 
-Additional levels and puzzle challenges.
 
-More interactive gameplay features.
 
-👩‍💻 Developer
+Configure the required environment variables in backend/.env. Never commit your real .env file or credentials to GitHub.
+
+
+
+ðŸ‘©â€ðŸ’» Developer
+
+
 
 Ayushi Pandey
 
-GitHub: @ayushipandey26feb
 
-⭐ If you like this project, consider giving it a star on GitHub!
+
+GitHub: ayushipandey26feb
+
+
+
+Built with â¤ï¸ as a puzzle adventure game project.

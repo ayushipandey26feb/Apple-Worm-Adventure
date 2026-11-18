@@ -1,0 +1,13 @@
+{
+  "name": "Apple Worm Adventure",
+  "short_name": "Apple Worm",
+  "description": "A 50-level forest puzzle: guide your caterpillar, eat magical apples and find the portal.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#dff5ee",
+  "theme_color": "#174b3a",
+  "icons": [
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
