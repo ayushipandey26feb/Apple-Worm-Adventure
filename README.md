@@ -1,223 +1,130 @@
-ðŸ› Apple Worm Adventure
+🐛 Apple Worm Adventure
 
+Welcome to Apple Worm Adventure! 🎮
 
+A fun and challenging browser-based puzzle game where you guide a worm through exciting levels, collect apples, avoid obstacles, and reach the portal to win!
 
-Apple Worm Adventure is a browser-based puzzle game built with React and Python. Guide the worm through challenging levels, collect apples, solve puzzles, and unlock rewards!
+🌟 Features
 
+🧩 50 Challenging Levels – Explore 50 exciting puzzle levels.
 
+👤 User Authentication – Register and log in securely.
 
-ðŸŽ® Features
+🍎 Apple Collection – Collect apples to complete puzzles.
 
+⭐ Star Rewards – Earn up to 3 stars based on your performance.
 
+💰 Coin System – Earn and spend game coins.
 
-50 Challenging Levels â€“ Explore and complete 50 puzzle levels.
+🎁 Daily Rewards – Claim daily bonus coins.
 
+🏆 Achievements – Unlock achievements as you progress.
 
+📊 Leaderboard – Compare scores with other players.
 
-User Authentication â€“ Register and log in to your account.
+💾 Progress Saving – Save your game progress.
 
+🔊 Sound Effects – Toggle game sounds on or off.
 
+📱 Responsive Design – Enjoy the game on different screen sizes.
 
-Game Progress â€“ Save your progress and track your scores.
+🛠️ Technology Stack
 
-
-
-Achievements â€“ Unlock achievements through gameplay.
-
-
-
-Coins \& Rewards â€“ Earn and spend coins.
-
-
-
-Daily Rewards â€“ Claim daily bonus rewards.
-
-
-
-Leaderboard â€“ Compare scores with other players.
-
-
-
-Sound Effects â€“ Enjoy an interactive gaming experience.
-
-
-
-ðŸ› ï¸ Tech Stack
-
-
-
-Frontend
-
-
+🎨 Frontend
 
 React
 
-
-
 TypeScript
-
-
 
 Vite
 
+HTML5
 
+CSS3
 
-HTML, CSS, JavaScript
+JavaScript
 
-
-
-Backend
-
-
+⚙️ Backend
 
 Python
 
-
-
 FastAPI
-
-
 
 MongoDB
 
-
-
 Motor
-
-
 
 JWT Authentication
 
-
-
-ðŸ“ Project Structure
-
-
+📂 Project Structure
 
 Apple-Worm-Adventure/
+├── frontend/
+│   ├── src/
+│   ├── public/
+│   └── package.json
+├── backend/
+│   ├── server.py
+│   ├── requirements.txt
+│   └── .env.example
+├── .gitignore
+└── README.md
 
-â”œâ”€â”€ frontend/
+🚀 Installation and Setup
 
-â”‚   â”œâ”€â”€ src/
-
-â”‚   â”œâ”€â”€ public/
-
-â”‚   â””â”€â”€ package.json
-
-â”œâ”€â”€ backend/
-
-â”‚   â”œâ”€â”€ server.py
-
-â”‚   â”œâ”€â”€ requirements.txt
-
-â”‚   â”œâ”€â”€ routers/
-
-â”‚   â””â”€â”€ .env.example
-
-â”œâ”€â”€ .gitignore
-
-â””â”€â”€ README.md
-
-
-
-ðŸš€ Run Locally
-
-
-
-1\. Clone the repository
-
-
+1. Clone the Repository
 
 git clone https://github.com/ayushipandey26feb/Apple-Worm-Adventure.git
-
 cd Apple-Worm-Adventure
 
-
-
-2\. Start the backend
-
-
-
-cd backend
-
-python -m venv venv
-
-
-
-Activate the virtual environment on Windows:
-
-
-
-.\\venv\\Scripts\\Activate
-
-
-
-Install dependencies:
-
-
-
-pip install -r requirements.txt
-
-
-
-Create your local environment file:
-
-
-
-Copy-Item .env.example .env
-
-
-
-Update the required environment variables in .env, including your MongoDB connection string and JWT secret.
-
-
-
-Start the backend:
-
-
-
-uvicorn server:app --host 0.0.0.0 --port 8000 --reload
-
-
-
-3\. Start the frontend
-
-
-
-Open another terminal:
-
-
+2. Start the Frontend
 
 cd frontend
+npm install
+npm run dev
 
-yarn install
+3. Start the Backend
 
-yarn dev
+Open a separate terminal:
 
+cd backend
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn server:app --host 0.0.0.0 --port 8000 --reload
 
+Configure the required environment variables using backend/.env.example.
 
-Open the local URL displayed by Vite in your browser.
+🔐 Environment Variables
 
+The backend requires configuration such as:
 
+GAME_NAME
 
-ðŸ” Environment Variables
+MONGO_URL
 
+DB_NAME
 
+JWT_SECRET
 
-Configure the required environment variables in backend/.env. Never commit your real .env file or credentials to GitHub.
+ADMIN_EMAIL
 
+ADMIN_PASSWORD
 
+CORS_ORIGINS
 
-ðŸ‘©â€ðŸ’» Developer
+Important: Never upload your actual .env file, passwords, or secret keys to GitHub.
 
-
+👩‍💻 Developer
 
 Ayushi Pandey
 
+GitHub: Ayushi Pandey
 
+❤️ Acknowledgement
 
-GitHub: ayushipandey26feb
+Built with passion, creativity, and a love for puzzle games!
 
+📜 License
 
-
-Built with â¤ï¸ as a puzzle adventure game project.
+Developed for learning and educational purposes.
